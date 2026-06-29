@@ -7,7 +7,7 @@ Built-in `/share` stays untouched; this is an additive extension.
 ## Install
 
 ```bash
-pi extension add @alexanderfortin/pi-share-opengist
+pi install @alexanderfortin/pi-share-opengist
 ```
 
 Or, for local development:
@@ -17,7 +17,7 @@ git clone https://github.com/shaftoe/pi-share-opengist
 cd pi-share-opengist
 bun install
 bun run build
-pi extension add ./dist/index.js
+pi -e ./dist/index.js
 ```
 
 ## Configuration
