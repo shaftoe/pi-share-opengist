@@ -1,4 +1,4 @@
-# @alexanderfortin/pi-share-opengist
+# pi-share-opengist
 
 A [Pi](https://pi.dev) extension that exports the current session to the same self-contained HTML Pi already produces for `/export`, uploads it to a self-hosted [Opengist](https://opengist.io/) instance, and prints a shareable link — without relying on the GitHub CLI or GitHub gists.
 
