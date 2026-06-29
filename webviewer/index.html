@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Opengist Viewer</title>
+
+<!-- Pico.css (classless, semantic) via jsDelivr CDN — owns ALL theming. -->
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'self'; connect-src https: http:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline'; frame-src 'self' blob: data:;" />
+
+<!-- Layout glue only — Pico handles every visual. These few rules do the two
+     things Pico deliberately doesn't: center the empty-state form, and (the
+     viewer's main feature) let the rendered gist fill the entire viewport. -->
+<style>
+  html { height: 100%; }
+  body { min-height: 100%; margin: 0; display: grid; place-items: center; }
+  /* The gist fills the screen as if it's the only content. */
+  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Empty state: a centered form. Hidden once a gist renders. -->
+<main class="container" id="formCard">
+  <article>
+    <hgroup>
+      <h1>Opengist Viewer</h1>
+      <p>Paste an Opengist URL to render its HTML — fully in your browser.</p>
+    </hgroup>
+    <form id="form">
+      <label for="input">Gist URL</label>
+      <input id="input" type="text"
+        placeholder="https://gist.l3x.in/alex/1234" autocomplete="off" />
+      <button type="submit" id="viewBtn">View</button>
+      <small>Or link directly with a fragment: <code>…/#https://gist.l3x.in/alex/1234</code></small>
+      <p id="status" aria-live="polite"></p>
+    </form>
+  </article>
+</main>
+
+<!-- Viewer state: the rendered gist, filling the whole viewport. -->
+<iframe id="frame" title="Gist content" referrerpolicy="no-referrer" hidden></iframe>
+
+<script>
+"use strict";
+/* ------------------------------------------------------------------ *
+ * Pure helpers — no DOM.
+ * ------------------------------------------------------------------ */
+
+/** Built-in default instance, used only for bare-uuid / bare-slug input. */
+const DEFAULT_HOST = ""; // e.g. "https://gist.l3x.in"; blank → require a full URL
+
+/** Suffixes the web router strips when resolving a gist name. */
+const GIST_SUFFIX_RE = /\.(json|js|git)$/i;
+
+function isHexId(s, min = 32, max = 40) {
+  return typeof s === "string" && /^[0-9a-fA-F]{min,40}$/.test(s) && s.length <= max;
+}
+function looksLikeUuid(s) { return isHexId(s, 32, 40); }
+
+function segments(p) { return (p || "").split("/").map((s) => s.trim()).filter(Boolean); }
+
+/** Turn raw user input into a normalized gist reference. */
+function parseRef(input) {
+  const raw = (input || "").trim();
+  if (!raw) return { kind: null };
+  const host = (DEFAULT_HOST || "").replace(/\/+$/, "");
+
+  const looksUrlish = /^[a-z]+:\/\//i.test(raw) || /^[^\s/]+\.[^\s/]+\//i.test(raw);
+  if (looksUrlish) {
+    let urlString = /^[a-z]+:\/\//i.test(raw) ? raw : "https://" + raw;
+    let url;
+    try { url = new URL(urlString); } catch { return { kind: "bare", id: raw, host }; }
+
+    const segs = segments(url.pathname);
+    if (segs[0] === "api" && segs[1] === "gists" && segs[2]) {
+      return { kind: "api", host: `${url.protocol}//${url.host}`, uuid: segs[2] };
+    }
+    if (segs.length >= 2) {
+      return { kind: "url", host: `${url.protocol}//${url.host}`, user: decodeURIComponent(segs[0]), gist: segs[1].replace(GIST_SUFFIX_RE, "") };
+    }
+    if (segs.length === 1) return { kind: "bare", id: segs[0], host: `${url.protocol}//${url.host}` };
+    return { kind: "bare", id: raw, host };
+  }
+  return { kind: "bare", id: raw, host };
+}
+
+/** Pick the file to render — prefer *.html, else the first file. */
+function pickHtmlFile(files) {
+  const list = Array.isArray(files) ? files : [];
+  const html = list.filter((f) => /\.html?$/i.test(f.filename || ""));
+  return { file: html[0] || list[0] || null };
+}
+
+function buildRawUrl(host, user, gist, filename) {
+  return `${host}/${user}/${gist}/raw/HEAD/${encodeURIComponent(filename)}`;
+}
+
+async function fetchGist(ref) {
+  if (ref.kind === "url") return fetchJsonGist(`${ref.host}/${ref.user}/${ref.gist}.json`, ref);
+  if (ref.kind === "api") return fetchJsonGist(`${ref.host}/api/gists/${ref.uuid}`, ref, { isApi: true });
+  if (!ref.host) throw err("No host", "Paste the full Opengist URL (e.g. https://gist.l3x.in/alex/1234).");
+  if (looksLikeUuid(ref.id)) return fetchJsonGist(`${ref.host}/api/gists/${ref.id}`, ref, { isApi: true });
+  throw err("Can't resolve a bare slug", "A bare slug needs a user — use the full URL.");
+}
+
+async function fetchJsonGist(jsonUrl, ref, { isApi = false } = {}) {
+  let res;
+  try { res = await fetch(jsonUrl, { redirect: "follow" }); }
+  catch (e) {
+    throw err("Network / CORS error", `Could not reach ${jsonUrl}. The instance may be down or block cross-origin requests. (${e.message || e})`);
+  }
+  if (res.status === 404) throw err("Gist not found", `${jsonUrl} — it may be private or deleted.`);
+  if (!res.ok) throw err("Opengist error", `HTTP ${res.status} ${res.statusText || ""}`);
+
+  let data;
+  try { data = await res.json(); }
+  catch (e) { throw err("Bad response", "The endpoint did not return JSON."); }
+
+  const { file } = pickHtmlFile(data.files);
+  if (!file) throw err("Empty gist", "This gist has no files.");
+
+  const owner = data.owner || ref.user || "";
+  let slug = data.id || ref.gist || "";
+  if (!slug && isApi && data.url) slug = String(data.url).split("/").pop();
+
+  let content = file.content || "";
+  if (file.truncated || !content) {
+    const rawUrl = file.raw_url || (owner && slug ? buildRawUrl(ref.host, owner, slug, file.filename) : null);
+    if (!rawUrl) throw err("Content truncated", "The file is truncated and no raw URL was available.");
+    content = await fetchRaw(rawUrl);
+  }
+
+  return {
+    content,
+    filename: file.filename || "content",
+    type: file.type || "",
+    owner, slug,
+    title: data.title || file.filename || "gist",
+    external: owner && slug ? `${ref.host}/${owner}/${slug}` : ref.host,
+  };
+}
+
+async function fetchRaw(url) {
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw err("Raw fetch failed", `HTTP ${res.status} for ${url}`);
+  return await res.text();
+}
+
+function err(msg, detail) { const e = new Error(msg); e.publicMsg = msg; e.detail = detail || ""; return e; }
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function isHtmlContent(content, filename, type) {
+  if (/\.html?$/i.test(filename || "")) return true;
+  if (typeof type === "string" && /html/i.test(type)) return true;
+  return /^\s*(<!doctype html|<html[\s>])/i.test(content || "");
+}
+
+/* ------------------------------------------------------------------ *
+ * DOM + state
+ * ------------------------------------------------------------------ */
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  formCard: $("formCard"), form: $("form"), input: $("input"),
+  viewBtn: $("viewBtn"), status: $("status"), frame: $("frame"),
+};
+
+function resolveInput() {
+  return parseRef(decodeURIComponent(location.hash.replace(/^#/, "")).trim());
+}
+
+function describe(ref) {
+  if (ref.kind === "url") return `${ref.host}/${ref.user}/${ref.gist}`;
+  if (ref.kind === "api") return `${ref.host}/api/gists/${ref.uuid}`;
+  return `${ref.host || "(no host)"}/${ref.id || ""}`;
+}
+
+/** Show the empty-state form; hide the viewer. */
+function showForm() {
+  els.formCard.hidden = false;
+  els.frame.hidden = true;
+}
+
+/** Show the full-viewport viewer; hide the form. */
+function showViewer() {
+  els.formCard.hidden = true;
+  els.frame.hidden = false;
+}
+
+function setStatus(html, { invalid = false } = {}) {
+  els.status.innerHTML = html || "";
+  if (invalid) els.input.setAttribute("aria-invalid", "true");
+  else els.input.removeAttribute("aria-invalid");
+}
+
+/** Full-viewport loading screen rendered inside the iframe (no form flash). */
+function showLoading(text) {
+  els.frame.sandbox = "";
+  els.frame.srcdoc =
+    `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark">` +
+    `<body style="margin:0;height:100vh;display:grid;place-items:center;` +
+    `font-family:system-ui,-apple-system,sans-serif;color:#8b949e;background:#fff" ` +
+    `aria-busy="true">Loading ${escapeHtml(text)}…</body>`;
+  showViewer();
+}
+
+function render(data) {
+  if (isHtmlContent(data.content, data.filename, data.type)) {
+    els.frame.sandbox = "allow-scripts allow-same-origin allow-popups allow-forms allow-modals";
+    els.frame.srcdoc = data.content;
+  } else {
+    els.frame.sandbox = "";
+    els.frame.srcdoc =
+      `<!doctype html><meta charset="utf-8"><body style="margin:0">` +
+      `<pre style="margin:0;padding:16px;white-space:pre-wrap;word-break:break-word;` +
+      `font:13px/1.5 ui-monospace,Menlo,Consolas,monospace">${escapeHtml(data.content)}</pre></body>`;
+  }
+  showViewer();
+}
+
+async function load() {
+  const ref = resolveInput();
+  if (!ref.kind) { showForm(); setStatus(""); els.input.focus(); return; }
+  // Loading state fills the viewport (share links never see the form).
+  showLoading(describe(ref));
+  try {
+    render(await fetchGist(ref));
+  } catch (e) {
+    showForm();
+    setStatus(
+      `<strong>${escapeHtml(e.publicMsg || e.message || "Error")}</strong>` +
+      (e.detail ? ` — ${escapeHtml(e.detail)}` : ""),
+      { invalid: true },
+    );
+    els.input.focus();
+  }
+}
+
+/* ---- events ---- */
+function submitToHash(value) {
+  const v = (value || "").trim();
+  if (!v) return;
+  if (location.hash === "#" + encodeURIComponent(v)) load();
+  else location.hash = encodeURIComponent(v);
+}
+els.form.addEventListener("submit", (e) => { e.preventDefault(); submitToHash(els.input.value); });
+window.addEventListener("hashchange", load);
+
+// Prefill the input from the current fragment.
+(function prefill() {
+  const ref = resolveInput();
+  if (ref.kind) els.input.value = decodeURIComponent(location.hash.replace(/^#/, ""));
+})();
+
+load();
+</script>
+</body>
+</html>
