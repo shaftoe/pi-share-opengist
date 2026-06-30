@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-30
+
+### Changed
+
+- **deps**: update dependencies (#2)
+- update readme
+- update README.md
+
+### Fixed
+
+- add support for gistviewer.l3x.in
+
 ## [0.1.0] - 2026-06-30
 
 ### Added
@@ -36,3 +48,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `unlisted`.
 - Fixed HTML export to pass an explicit output path to `pi --export` and to
   parse the `Exported to: <path>` stdout line correctly.
+
+[0.1.1]: https://github.com/shaftoe/pi-share-opengist/compare/v0.1.0...v0.1.1

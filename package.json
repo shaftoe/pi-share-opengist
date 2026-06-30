@@ -1,6 +1,6 @@
 {
   "name": "@alexanderfortin/pi-share-opengist",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pi extension that shares sessions to a self-hosted Opengist instance",
   "type": "module",
   "main": "./dist/index.js",
