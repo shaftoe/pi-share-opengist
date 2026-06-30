@@ -50,7 +50,7 @@ export interface UploadGistOptions {
 /**
  * Create a gist on a self-hosted Opengist instance.
  *
- * @param host   Opengist base URL, no trailing slash (e.g. https://gist.l3x.in)
+ * @param host   Opengist base URL, no trailing slash (e.g. https://opengist.my.domain)
  * @param token  Bearer token (Opengist personal access token)
  * @param html   HTML body of the single-file gist
  * @param opts   visibility + abort signal + description/filename

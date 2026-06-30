@@ -41,10 +41,24 @@ function readConfig(): { host: string; token: string; visibility: Visibility } |
   }
 }
 
-/** Build the final share URL honoring PI_SHARE_VIEWER_URL when set. */
-export function buildShareUrl(gistId: string, gistUrl: string): string {
-  const viewer = process.env.PI_SHARE_VIEWER_URL
-  return viewer ? `${viewer}#${gistId}` : gistUrl
+/** Default viewer that renders an Opengist HTML gist full-screen (like pi.dev/share). */
+export const DEFAULT_VIEWER_URL = "https://gistviewer.l3x.in/"
+
+/**
+ * Build the final share URL.
+ *
+ * The viewer resolves the gist from the full Opengist URL carried in the
+ * fragment (`<viewer>#<gistUrl>`), so it's host-agnostic and needs no
+ * per-instance configuration on the viewer side.
+ *
+ * Viewer base resolution:
+ *   - `PI_SHARE_VIEWER_URL` when set (point at your own viewer; set it to an
+ *     empty string to opt out and get the raw Opengist URL back)
+ *   - otherwise the public https://gistviewer.l3x.in/
+ */
+export function buildShareUrl(gistUrl: string): string {
+  const viewer = process.env.PI_SHARE_VIEWER_URL ?? DEFAULT_VIEWER_URL
+  return viewer ? `${viewer}#${gistUrl}` : gistUrl
 }
 
 export default function piShareOpengist(pi: ExtensionAPI): void {
@@ -72,7 +86,7 @@ export default function piShareOpengist(pi: ExtensionAPI): void {
           ...(ctx.signal ? { signal: ctx.signal } : {}),
         })
 
-        const url = buildShareUrl(gist.id, gist.url)
+        const url = buildShareUrl(gist.url)
         if (copyToClipboard(url)) {
           ctx.ui.notify(`Shared (copied): ${url}`, "info")
         } else {

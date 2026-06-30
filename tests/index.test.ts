@@ -38,13 +38,24 @@ describe("buildShareUrl", () => {
   })
   afterEach(() => restoreEnv(snap))
 
-  it("returns the raw gist URL when no viewer is configured", () => {
-    expect(buildShareUrl("id1", "https://gist.l3x.in/u/slug")).toBe("https://gist.l3x.in/u/slug")
+  it("defaults to the public gistviewer with the full gist URL in the fragment", () => {
+    expect(buildShareUrl("https://opengist.l3x.in/alex/abc123")).toBe(
+      "https://gistviewer.l3x.in/#https://opengist.l3x.in/alex/abc123",
+    )
   })
 
-  it("builds <viewer>#<id> when PI_SHARE_VIEWER_URL is set", () => {
-    process.env.PI_SHARE_VIEWER_URL = "https://pi.dev/session/"
-    expect(buildShareUrl("id1", "https://gist.l3x.in/u/slug")).toBe("https://pi.dev/session/#id1")
+  it("honors a custom PI_SHARE_VIEWER_URL", () => {
+    process.env.PI_SHARE_VIEWER_URL = "https://my-viewer.example/"
+    expect(buildShareUrl("https://opengist.l3x.in/alex/abc123")).toBe(
+      "https://my-viewer.example/#https://opengist.l3x.in/alex/abc123",
+    )
+  })
+
+  it("returns the raw gist URL when PI_SHARE_VIEWER_URL is set to empty", () => {
+    process.env.PI_SHARE_VIEWER_URL = ""
+    expect(buildShareUrl("https://opengist.l3x.in/alex/abc123")).toBe(
+      "https://opengist.l3x.in/alex/abc123",
+    )
   })
 })
 

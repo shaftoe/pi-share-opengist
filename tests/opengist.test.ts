@@ -39,21 +39,21 @@ describe("uploadGist", () => {
     mockFetch.mockImplementationOnce(() =>
       Promise.resolve(
         okResponse({
-          html_url: "https://gist.l3x.in/alex/abc123",
+          html_url: "https://opengist.my.domain/alex/abc123",
           uuid: "abc123",
         }),
       ),
     )
 
-    const result = await uploadGist("https://gist.l3x.in", "tok", "<html>", {
+    const result = await uploadGist("https://opengist.my.domain", "tok", "<html>", {
       fetchImpl: mockFetch,
     })
 
     expect(result.id).toBe("abc123")
-    expect(result.url).toBe("https://gist.l3x.in/alex/abc123")
+    expect(result.url).toBe("https://opengist.my.domain/alex/abc123")
 
     const [url, init] = mockFetch.mock.calls[0]
-    expect(url).toBe("https://gist.l3x.in/api/gists")
+    expect(url).toBe("https://opengist.my.domain/api/gists")
     expect(init.method).toBe("POST")
     const headers = init.headers as Record<string, string>
     expect(headers.Authorization).toBe("Bearer tok")
@@ -101,7 +101,7 @@ describe("uploadGist", () => {
 
   it("derives id from the url's last path segment when uuid/id absent", async () => {
     mockFetch.mockImplementationOnce(() =>
-      Promise.resolve(okResponse({ html_url: "https://gist.l3x.in/alex/segid" })),
+      Promise.resolve(okResponse({ html_url: "https://opengist.my.domain/alex/segid" })),
     )
     const result = await uploadGist("https://h", "t", "x", { fetchImpl: mockFetch })
     expect(result.id).toBe("segid")
