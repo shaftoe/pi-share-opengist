@@ -27,7 +27,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@alexanderfortin/semantic-release-keep-a-changelog": "^0.4.13",
+    "@alexanderfortin/semantic-release-keep-a-changelog": "^0.4.14",
     "@biomejs/biome": "^2.5.14",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
@@ -39,7 +39,7 @@
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.87.0"
+    "@earendil-works/pi-coding-agent": "^0.87.1"
   },
   "publishConfig": {
     "access": "public"
