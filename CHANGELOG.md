@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-25
+
+### Added
+
+- replace Bun with PNPM
+
+### Changed
+
+- **deps-dev**: update dependencies (#10)
+- **deps-dev**: update dependencies (#11)
+- **deps**: update dependencies (#4)
+- **deps**: update dependencies (#5)
+- **deps**: update dependencies (#7)
+- **deps**: update dependencies (#9)
+- **deps**: update dependencies, Pi sdk to v0.86.0 (#12)
+- **deps**: update dependencies, Pi sdk to v0.86.1 (#13)
+- **deps**: update dependencies, Pi to v0.87.0 (#14)
+- **deps**: update dependencies, Pi to v0.87.1 (#15)
+
 ## [0.1.1] - 2026-06-30
 
 ### Changed
@@ -49,4 +68,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed HTML export to pass an explicit output path to `pi --export` and to
   parse the `Exported to: <path>` stdout line correctly.
 
+[0.2.0]: https://github.com/shaftoe/pi-share-opengist/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/shaftoe/pi-share-opengist/compare/v0.1.0...v0.1.1
