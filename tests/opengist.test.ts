@@ -2,7 +2,7 @@
  * Unit tests for opengist.ts — GitHub-compatible gist upload.
  */
 
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { OpengistError, uploadGist } from "../src/opengist"
 
 function okResponse(body: unknown): Response {
@@ -28,7 +28,7 @@ describe("uploadGist", () => {
   let mockFetch: any
 
   beforeEach(() => {
-    mockFetch = mock(() => Promise.resolve(okResponse({})))
+    mockFetch = vi.fn(() => Promise.resolve(okResponse({})))
   })
 
   afterEach(() => {

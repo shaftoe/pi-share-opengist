@@ -5,7 +5,7 @@
  * so we test the pure helpers it delegates to.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { buildShareUrl, resolveVisibility } from "../src/index"
 
 const ENV_KEYS = [

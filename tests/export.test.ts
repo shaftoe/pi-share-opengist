@@ -6,8 +6,8 @@
  * using injectable spawn + reader implementations.
  */
 
-import { beforeEach, describe, expect, it, mock } from "bun:test"
 import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { exportSessionHtml, type ReadFile } from "../src/export"
 
 function mockCtx(sessionFile: string | null): ExtensionCommandContext {
@@ -36,7 +36,7 @@ describe("exportSessionHtml (CLI path)", () => {
 
   it("passes an explicit output path and reads the HTML it asked for", async () => {
     const calls: unknown[][] = []
-    const spawnImpl = mock((_c: string, _a: string[]) => {
+    const spawnImpl = vi.fn((_c: string, _a: string[]) => {
       calls.push([_c, _a])
       // Real Pi prints `Exported to: <path>` to stdout.
       return {
@@ -45,7 +45,7 @@ describe("exportSessionHtml (CLI path)", () => {
         stderr: "",
       } satisfies SpawnStub
     }) as never
-    const readImpl = mock(() => "<html>body</html>") as unknown as ReadFile & {
+    const readImpl = vi.fn(() => "<html>body</html>") as unknown as ReadFile & {
       mock: { calls: string[][] }
     }
 
@@ -59,7 +59,7 @@ describe("exportSessionHtml (CLI path)", () => {
   })
 
   it("reads the explicit output path when stdout is empty", async () => {
-    const spawnImpl = mock(() => ({ status: 0, stdout: "", stderr: "" }) as SpawnStub) as never
+    const spawnImpl = vi.fn(() => ({ status: 0, stdout: "", stderr: "" }) as SpawnStub) as never
     let readPath = ""
     const readImpl = ((p: string) => {
       readPath = p
@@ -75,7 +75,7 @@ describe("exportSessionHtml (CLI path)", () => {
       readPath = p
       return "<html/>"
     }) as ReadFile
-    const spawnImpl = mock(
+    const spawnImpl = vi.fn(
       () =>
         ({
           status: 0,
@@ -88,7 +88,7 @@ describe("exportSessionHtml (CLI path)", () => {
   })
 
   it("throws a spawn error on non-zero exit", async () => {
-    const spawnImpl = mock(() => ({ status: 1, stdout: "", stderr: "boom" }) as SpawnStub) as never
+    const spawnImpl = vi.fn(() => ({ status: 1, stdout: "", stderr: "boom" }) as SpawnStub) as never
     try {
       await exportSessionHtml(mockCtx("/s/s.jsonl"), { spawnImpl })
       expect.unreachable("should throw")

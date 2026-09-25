@@ -2,7 +2,7 @@
  * Unit tests for meta.ts — gist description + filename building.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { buildGistMeta } from "../src/meta"
 
 const FIXED = new Date("2026-06-29T14:37:24Z")

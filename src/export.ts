@@ -105,6 +105,7 @@ function exportViaCli(sessionFile: string, readImpl: ReadFile, spawnImpl: SpawnF
 }
 
 /** Wrap node's spawnSync into the minimal SpawnFn shape, passing utf-8. */
+/* v8 ignore next -- trivial wrapper exercised only via the real CLI */
 function adaptSpawn(fn: typeof spawnSync): SpawnFn {
   return (command, args) => {
     const r = fn(command, args, { encoding: "utf-8" })
@@ -122,6 +123,7 @@ function adaptSpawn(fn: typeof spawnSync): SpawnFn {
  * Wrapped in dynamic import + try/catch so a missing/moved internal module
  * degrades gracefully to the CLI strategy instead of crashing the command.
  */
+/* v8 ignore next -- B3 path only reachable against a real Pi install */
 async function exportInProcess(ctx: ExtensionCommandContext): Promise<string> {
   try {
     // Resolve the installed pi package dir, then deep-import its internal

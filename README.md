@@ -15,8 +15,8 @@ Or, for local development:
 ```bash
 git clone https://github.com/shaftoe/pi-share-opengist
 cd pi-share-opengist
-bun install
-bun run build
+pnpm install
+pnpm run build
 pi -e ./dist/index.js
 ```
 
@@ -62,11 +62,11 @@ You'll get a notification with the share URL (copied to the clipboard when avail
 ## Development
 
 ```bash
-bun install
-bun run check      # typecheck + lint
-bun test           # unit tests
-bun run build      # typecheck + emit dist/
-bun run release:dry-run
+pnpm install
+pnpm run check     # typecheck + lint
+pnpm test         # unit tests
+pnpm run build     # typecheck + emit dist/
+pnpm run release:dry-run
 ```
 
 Pre-commit hooks run via [lefthook](https://github.com/evilmartians/lefthook): format, lint, and tests.
